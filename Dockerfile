@@ -6,18 +6,34 @@ ENV DJANGO_SETTINGS_MODULE=config.settings.production
 
 WORKDIR /app
 
+# ============================================================
+# System dependencies
+# ============================================================
+
 RUN apt-get update && apt-get install -y --no-install-recommends \
     build-essential \
     libpq-dev \
     && rm -rf /var/lib/apt/lists/*
 
+# ============================================================
+# Python dependencies
+# ============================================================
+
 COPY requirements.txt .
 
 RUN pip install --no-cache-dir -r requirements.txt
 
+# ============================================================
+# Application
+# ============================================================
+
 COPY . .
 
-# Temporary environment required only while collecting static files
+# ============================================================
+# Build-time environment
+# Used only for collectstatic
+# ============================================================
+
 RUN printf '%s\n' \
     'SECRET_KEY=build-only-secret-key' \
     'ALLOWED_HOSTS=localhost,127.0.0.1' \
@@ -38,6 +54,14 @@ RUN printf '%s\n' \
     && python manage.py collectstatic --noinput \
     && rm -f .env
 
+# ============================================================
+# Application port
+# ============================================================
+
 EXPOSE 8000
 
-CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000"]
+# ============================================================
+# Gunicorn
+# ============================================================
+
+CMD ["gunicorn", "config.wsgi:application", "--bind", "0.0.0.0:8000", "--workers", "2", "--worker-class", "gthread", "--threads", "4", "--timeout", "120", "--graceful-timeout", "30", "--keep-alive", "5", "--access-logfile", "-", "--error-logfile", "-"]
