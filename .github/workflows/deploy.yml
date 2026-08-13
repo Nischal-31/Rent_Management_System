@@ -1,0 +1,42 @@
+name: Build and Push Application
+
+on:
+  push:
+    branches:
+      - master
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout the infrastructure repository
+      - name: Checkout infrastructure repository first
+        uses: actions/checkout@v4
+
+      # 2. Clone the application repository
+      - name: Clone application repository
+        run: |
+          git clone https://github.com/BikashGosain/Rent_Management_System.git app
+
+      # 3. Set up Docker Buildx
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      # 4. Login to Docker Hub
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      # 5. Build and push Docker image
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./app
+          file: ./Dockerfile
+          push: true
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/rent-management-system:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/rent-management-system:${{ github.sha }}
